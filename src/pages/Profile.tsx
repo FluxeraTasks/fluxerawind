@@ -14,13 +14,25 @@ const Profile = () => {
       try {
         if (!user?.id) return;
 
+        // Debug: Verificar se conseguimos fazer uma consulta simples
+        const { data: tables, error: tablesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .limit(1);
+
+        console.log('Debug - Tables:', tables);
+        console.log('Debug - Tables Error:', tablesError);
+
         const { data, error } = await supabase
           .from('profiles')
           .select('name')
           .eq('id', user.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Debug - Profile Error:', error);
+          throw error;
+        }
 
         if (data) {
           setName(data.name || '');
@@ -38,6 +50,7 @@ const Profile = () => {
             .single();
 
           if (insertError) {
+            console.error('Debug - Insert Error:', insertError);
             // If insert fails due to duplicate, try fetching again
             if (insertError.code === '23505') {
               const { data: retryData, error: retryError } = await supabase
@@ -46,7 +59,10 @@ const Profile = () => {
                 .eq('id', user.id)
                 .single();
 
-              if (retryError) throw retryError;
+              if (retryError) {
+                console.error('Debug - Retry Error:', retryError);
+                throw retryError;
+              }
               if (retryData) setName(retryData.name || '');
             } else {
               throw insertError;
@@ -68,16 +84,21 @@ const Profile = () => {
     setMessage('');
 
     try {
+      if (!user?.id) throw new Error('User not authenticated');
+
       const { error } = await supabase
         .from('profiles')
         .update({ name })
-        .eq('id', user?.id);
+        .match({ id: user.id });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Detailed error:', error);
+        throw error;
+      }
       setMessage('Perfil atualizado com sucesso!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      setMessage('Erro ao atualizar perfil.');
+      setMessage('Erro ao atualizar perfil. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }

@@ -24,9 +24,15 @@ const Login = () => {
         await signIn(email, password);
       }
       navigate('/dashboard/profile');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Authentication error:', err);
-      setError('Erro na autenticação. Por favor, tente novamente.');
+      if (err.message === 'Invalid login credentials') {
+        setError('Email ou senha incorretos. Por favor, verifique suas credenciais.');
+      } else if (err.message.includes('Email not confirmed')) {
+        setError('Por favor, confirme seu email antes de fazer login.');
+      } else {
+        setError('Erro na autenticação. Por favor, tente novamente.');
+      }
     } finally {
       setLoading(false);
     }

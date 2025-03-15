@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { User } from '@supabase/supabase-js';
+import { User, AuthError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
 export type AuthContextType = {
@@ -22,6 +22,17 @@ export const getSession = async () => {
 };
 
 export const signIn = async (email: string, password: string) => {
+  // Primeiro, verifica se o usuário existe
+  const { data: users, error: userError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+  if (userError && userError.code === 'PGRST116') {
+    throw new AuthError('Email não cadastrado. Por favor, registre-se primeiro.');
+  }
+
   const { data: { session }, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -35,9 +46,23 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const signUp = async (email: string, password: string) => {
+  // Primeiro, verifica se o usuário já existe
+  const { data: existingUser } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+  if (existingUser) {
+    throw new AuthError('Este email já está cadastrado. Por favor, faça login.');
+  }
+
   const { data: { session }, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`
+    }
   });
   
   if (error) {
@@ -51,12 +76,14 @@ export const signUp = async (email: string, password: string) => {
       .insert([
         {
           id: session.user.id,
+          email: email,
           name: email.split('@')[0], // Use part of email as initial name
         }
       ]);
 
     if (profileError) {
       console.error('Error creating profile:', profileError);
+      throw new Error('Erro ao criar perfil do usuário');
     }
   }
   

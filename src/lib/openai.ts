@@ -1,7 +1,8 @@
 import OpenAI from 'openai';
+import { Message } from 'openai/resources/beta/threads/messages';
 
 const openai = new OpenAI({
-  apiKey: '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',
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true
 });
 
@@ -101,8 +102,8 @@ Mantenha a documentação clara e focada nas informações essenciais.`
           const messages = await openai.beta.threads.messages.list(thread.id);
           // Get the last assistant message
           const lastMessage = messages.data
-            .filter(message => message.role === 'assistant')
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            .filter((message: Message) => message.role === 'assistant')
+            .sort((a: Message, b: Message) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
           if (lastMessage?.content?.[0]?.type === 'text') {
             documentation = lastMessage.content[0].text.value;
@@ -204,12 +205,12 @@ Instruções:
         }
 
         const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-        
+
         if (runStatus.status === 'completed') {
           const messages = await openai.beta.threads.messages.list(thread.id);
           const lastMessage = messages.data
-            .filter(message => message.role === 'assistant')
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            .filter((message: Message) => message.role === 'assistant')
+            .sort((a: Message, b: Message) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
           if (lastMessage?.content?.[0]?.type === 'text') {
             updatedDocumentation = lastMessage.content[0].text.value;

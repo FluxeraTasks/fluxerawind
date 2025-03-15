@@ -3,6 +3,7 @@ import { generateDocumentation } from '../lib/openai';
 import DocumentationHeader from './documentation/DocumentationHeader';
 import DocumentationContent from './documentation/DocumentationContent';
 import DocumentationChat from './documentation/DocumentationChat';
+import { supabase } from '../lib/supabase';
 
 interface ArtifactDocumentationProps {
   artifactId: string;
@@ -34,6 +35,17 @@ const ArtifactDocumentation: React.FC<ArtifactDocumentationProps> = ({
 
     try {
       const newDocumentation = await generateDocumentation(artifactData, artifactName);
+      
+      // Salva a documentação no Supabase
+      const { error: updateError } = await supabase
+        .from('artifacts')
+        .update({ documentation: newDocumentation })
+        .eq('id', artifactId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
       setDocumentation(newDocumentation);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate documentation');
@@ -42,8 +54,24 @@ const ArtifactDocumentation: React.FC<ArtifactDocumentationProps> = ({
     }
   };
 
-  const handleDocumentationUpdate = (newDocumentation: string) => {
-    setDocumentation(newDocumentation);
+  const handleDocumentationUpdate = async (newDocumentation: string) => {
+    try {
+      // Salva a documentação atualizada no Supabase
+      const { error: updateError } = await supabase
+        .from('artifacts')
+        .update({ documentation: newDocumentation })
+        .eq('id', artifactId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      setDocumentation(newDocumentation);
+    } catch (err) {
+      console.error('Error updating documentation:', err);
+      // Mesmo com erro, atualizamos o estado local para manter a consistência da UI
+      setDocumentation(newDocumentation);
+    }
   };
 
   return (

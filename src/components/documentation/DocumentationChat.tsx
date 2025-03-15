@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Loader2 } from 'lucide-react';
-import { generateDocumentation } from '../../lib/openai';
+import { updateDocumentation } from '../../lib/openai';
 
 interface Message {
   id: string;
@@ -19,6 +19,7 @@ interface DocumentationChatProps {
 const DocumentationChat: React.FC<DocumentationChatProps> = ({
   artifactName,
   artifactData,
+  documentation,
   onDocumentationUpdate
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -40,7 +41,13 @@ const DocumentationChat: React.FC<DocumentationChatProps> = ({
     setLoading(true);
 
     try {
-      const updatedDocumentation = await generateDocumentation(artifactData, artifactName);
+      const updatedDocumentation = await updateDocumentation(
+        artifactData,
+        artifactName,
+        documentation,
+        newMessage.trim()
+      );
+      
       onDocumentationUpdate(updatedDocumentation);
 
       const assistantMessage: Message = {

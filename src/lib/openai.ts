@@ -174,7 +174,7 @@ ${dataJson}
 
 Requisição de melhoria: ${updateRequest}
 
-Instruções:
+Diretrizes de formato:
 - Use # para cabeçalhos principais
 - Use ## para subcabeçalhos
 - Use ### para subseções
@@ -183,6 +183,10 @@ Instruções:
 - Use \`\`\` para blocos de código
 - Use - para listas
 - Mantenha os parágrafos curtos e focados
+
+Mantenha a documentação clara e focada nas informações essenciais.
+
+Instruções:
 - Manter a estrutura e o formato da documentação existente
 - Manter todas as seções existentes (VISÃO GERAL, ESTRUTURA DE DADOS, etc.)
 - Atualizar ou adicionar informações com base na solicitação

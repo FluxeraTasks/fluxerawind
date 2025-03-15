@@ -47,6 +47,7 @@ export const generateDocumentation = async (artifactData: any, artifactName: str
     try {
       const truncatedData = truncateJSON(artifactData);
       const structureAnalysis = generateStructureAnalysis(artifactData);
+      const dataJson = JSON.stringify(truncatedData, null, 2);
 
       // Create a thread
       const thread = await openai.beta.threads.create();
@@ -61,21 +62,18 @@ ${structureAnalysis}
 
 Amostra de dados:
 \`\`\`json
-${JSON.stringify(truncatedData, null, 2)}
+${dataJson}
 \`\`\`
 
-Forneça documentação clara com as seguintes seções:
-1. VISÃO GERAL
-2. ESTRUTURA DE DADOS
-3. COMPONENTES-CHAVE
-4. DIRETRIZES DE USO
-
 Diretrizes de formato:
-- Use cabeçalhos de seção claros em letras maiúsculas
-- Use marcadores para listas (comece com •)
+- Use # para cabeçalhos principais
+- Use ## para subcabeçalhos
+- Use ### para subseções
+- Use ** ** para texto em negrito
+- Use \` \` para código inline
+- Use \`\`\` para blocos de código
+- Use - para listas
 - Mantenha os parágrafos curtos e focados
-- Evite qualquer sintaxe de markdown
-- Use apenas formatação de texto simples
 
 Mantenha a documentação clara e focada nas informações essenciais.`
       });
@@ -123,14 +121,10 @@ Mantenha a documentação clara e focada nas informações essenciais.`
         throw new Error('No documentation generated');
       }
 
-      // Clean up any remaining markdown syntax
+      // Apenas limpa formatações indesejadas e mantém as necessárias
       documentation = documentation
-        .replace(/#{1,3} /g, '')  // Remove heading markers
-        .replace(/\*\*/g, '')     // Remove bold markers
-        .replace(/\*/g, '')       // Remove italic markers
-        .replace(/`/g, '')        // Remove code markers
         .replace(/>/g, '')        // Remove blockquote markers
-        .replace(/- /g, '• ')     // Convert hyphens to bullet points
+        .replace(/^\s*[-•]\s*/gm, '- ')     // Padroniza bullets para hífen
         .trim();
 
       return documentation;
@@ -161,6 +155,7 @@ export const updateDocumentation = async (
   while (retries < MAX_RETRIES) {
     try {
       const truncatedData = truncateJSON(artifactData);
+      const dataJson = JSON.stringify(truncatedData, null, 2);
 
       // Create a thread
       const thread = await openai.beta.threads.create();
@@ -174,16 +169,23 @@ ${currentDocumentation}
 
 Contexto de dados:
 \`\`\`json
-${JSON.stringify(truncatedData, null, 2)}
+${dataJson}
 \`\`\`
 
 Requisição de melhoria: ${updateRequest}
 
 Instruções:
+- Use # para cabeçalhos principais
+- Use ## para subcabeçalhos
+- Use ### para subseções
+- Use ** ** para texto em negrito
+- Use \` \` para código inline
+- Use \`\`\` para blocos de código
+- Use - para listas
+- Mantenha os parágrafos curtos e focados
 - Manter a estrutura e o formato da documentação existente
 - Manter todas as seções existentes (VISÃO GERAL, ESTRUTURA DE DADOS, etc.)
 - Atualizar ou adicionar informações com base na solicitação
-- Usar a mesma formatação (marcadores com •, etc.)
 - Retornar a documentação completa atualizada
 - Preservar quaisquer detalhes técnicos não relacionados à atualização`
       });
@@ -205,9 +207,11 @@ Instruções:
         }
 
         const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-
+        
         if (runStatus.status === 'completed') {
+          // Get the messages
           const messages = await openai.beta.threads.messages.list(thread.id);
+          // Get the last assistant message
           const lastMessage = messages.data
             .filter((message: Message) => message.role === 'assistant')
             .sort((a: Message, b: Message) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
@@ -230,14 +234,10 @@ Instruções:
         throw new Error('No documentation generated');
       }
 
-      // Clean up any remaining markdown syntax
+      // Apenas limpa formatações indesejadas e mantém as necessárias
       updatedDocumentation = updatedDocumentation
-        .replace(/#{1,3} /g, '')
-        .replace(/\*\*/g, '')
-        .replace(/\*/g, '')
-        .replace(/`/g, '')
-        .replace(/>/g, '')
-        .replace(/- /g, '• ')
+        .replace(/>/g, '')        // Remove blockquote markers
+        .replace(/^\s*[-•]\s*/gm, '- ')     // Padroniza bullets para hífen
         .trim();
 
       return updatedDocumentation;
@@ -249,7 +249,8 @@ Instruções:
         throw new Error(`Failed to update documentation after ${MAX_RETRIES} attempts: ${error.message}`);
       }
 
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retries - 1)));
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
     }
   }
 

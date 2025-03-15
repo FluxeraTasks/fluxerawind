@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, X, AlertCircle, MessageSquare } from 'lucide-react';
 import { generateDocumentation } from '../lib/openai';
-import { supabase } from '../lib/supabase';
 import DocumentationChat from './DocumentationChat';
 
 interface ArtifactDocumentationProps {
@@ -19,36 +18,24 @@ const ArtifactDocumentation: React.FC<ArtifactDocumentationProps> = ({
   documentation: initialDocumentation,
   onClose
 }) => {
+  const [documentation, setDocumentation] = useState<string | null>(initialDocumentation);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [documentation, setDocumentation] = useState(initialDocumentation || '');
+  const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
-    if (!initialDocumentation) {
-      handleGenerateDocumentation();
-    }
+    setDocumentation(initialDocumentation);
   }, [initialDocumentation]);
 
   const handleGenerateDocumentation = async () => {
-    if (loading) return;
     setLoading(true);
-    setError('');
+    setError(null);
 
     try {
-      const docs = await generateDocumentation(artifactData, artifactName);
-      
-      const { error: saveError } = await supabase
-        .from('artifacts')
-        .update({ documentation: docs })
-        .eq('id', artifactId);
-
-      if (saveError) throw saveError;
-
-      setDocumentation(docs);
-    } catch (error: any) {
-      console.error('Error generating documentation:', error);
-      setError(error.message || 'Failed to generate documentation.');
+      const newDocumentation = await generateDocumentation(artifactData, artifactName);
+      setDocumentation(newDocumentation);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate documentation');
     } finally {
       setLoading(false);
     }
@@ -58,72 +45,86 @@ const ArtifactDocumentation: React.FC<ArtifactDocumentationProps> = ({
     setDocumentation(newDocumentation);
   };
 
-  const renderSection = (text: string) => {
-    const sections: JSX.Element[] = [];
-    let currentSection: JSX.Element[] = [];
-    let sectionKey = 0;
+  const renderSection = (content: string) => {
+    const lines = content.split('\n');
+    const sections: React.ReactNode[] = [];
+    let currentSection: React.ReactNode[] = [];
+    let inList = false;
 
-    text.split('\n').forEach((line, index) => {
+    lines.forEach((line, index) => {
       const trimmedLine = line.trim();
-      
-      if (!trimmedLine) {
+
+      if (trimmedLine === '') {
         if (currentSection.length > 0) {
-          sections.push(
-            <div key={`section-${sectionKey++}`} className="mb-6">
-              {currentSection}
-            </div>
-          );
+          sections.push(...currentSection);
           currentSection = [];
         }
+        inList = false;
         return;
       }
 
-      // Handle section headers (all caps)
-      if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 3) {
+      if (trimmedLine.startsWith('# ')) {
         if (currentSection.length > 0) {
-          sections.push(
-            <div key={`section-${sectionKey++}`} className="mb-6">
-              {currentSection}
-            </div>
-          );
+          sections.push(...currentSection);
           currentSection = [];
         }
         currentSection.push(
-          <h2 key={`header-${index}`} className="text-xl font-semibold text-gray-800 mb-4">
-            {trimmedLine}
+          <h2 key={`h2-${index}`} className="text-2xl font-semibold text-gray-900 mb-4">
+            {trimmedLine.substring(2)}
           </h2>
         );
-      }
-      // Handle bullet points
-      else if (trimmedLine.startsWith('•')) {
-        if (!currentSection.find(el => el.type === 'ul')) {
+      } else if (trimmedLine.startsWith('## ')) {
+        if (currentSection.length > 0) {
+          sections.push(...currentSection);
+          currentSection = [];
+        }
+        currentSection.push(
+          <h3 key={`h3-${index}`} className="text-xl font-semibold text-gray-900 mb-3">
+            {trimmedLine.substring(3)}
+          </h3>
+        );
+      } else if (trimmedLine.startsWith('### ')) {
+        if (currentSection.length > 0) {
+          sections.push(...currentSection);
+          currentSection = [];
+        }
+        currentSection.push(
+          <h4 key={`h4-${index}`} className="text-lg font-semibold text-gray-900 mb-2">
+            {trimmedLine.substring(4)}
+          </h4>
+        );
+      } else if (trimmedLine.startsWith('- ')) {
+        if (!inList) {
+          inList = true;
           currentSection.push(
             <ul key={`list-${index}`} className="list-none space-y-2 mb-4">
               <li key={`item-${index}`} className="flex items-start">
                 <span className="text-purple-600 mr-2">•</span>
-                <span className="text-gray-700">{trimmedLine.substring(1).trim()}</span>
+                <span className="text-gray-700">{trimmedLine.substring(2)}</span>
               </li>
             </ul>
           );
         } else {
-          const list = currentSection[currentSection.length - 1];
-          if (React.isValidElement(list) && list.type === 'ul') {
-            const newList = React.cloneElement(list, {
-              children: [...React.Children.toArray(list.props.children),
-                <li key={`item-${index}`} className="flex items-start">
-                  <span className="text-purple-600 mr-2">•</span>
-                  <span className="text-gray-700">{trimmedLine.substring(1).trim()}</span>
-                </li>
-              ]
+          const lastItem = currentSection[currentSection.length - 1];
+          if (React.isValidElement(lastItem) && lastItem.type === 'ul') {
+            const newItem = (
+              <li key={`item-${index}`} className="flex items-start">
+                <span className="text-purple-600 mr-2">•</span>
+                <span className="text-gray-700">{trimmedLine.substring(2)}</span>
+              </li>
+            );
+            const existingChildren = React.Children.toArray(lastItem.props.children);
+            const newList = React.createElement('ul', {
+              key: lastItem.key,
+              className: lastItem.props.className,
+              children: [...existingChildren, newItem]
             });
             currentSection[currentSection.length - 1] = newList;
           }
         }
-      }
-      // Handle regular paragraphs
-      else {
+      } else {
         currentSection.push(
-          <p key={`text-${index}`} className="text-gray-700 leading-relaxed mb-4">
+          <p key={`p-${index}`} className="text-gray-700 mb-4">
             {trimmedLine}
           </p>
         );
@@ -131,20 +132,24 @@ const ArtifactDocumentation: React.FC<ArtifactDocumentationProps> = ({
     });
 
     if (currentSection.length > 0) {
-      sections.push(
-        <div key={`section-${sectionKey}`} className="mb-6">
-          {currentSection}
-        </div>
-      );
+      sections.push(...currentSection);
     }
 
     return sections;
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+    <div 
+      className="fixed top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+      style={{ margin: 0, padding: 0, border: 0, boxSizing: 'border-box' }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div 
+        className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl flex flex-col h-[90vh] overflow-hidden" 
+        style={{ margin: 0, padding: 0, border: 0, boxSizing: 'border-box' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
               Documentação para {artifactName}
@@ -170,11 +175,11 @@ const ArtifactDocumentation: React.FC<ArtifactDocumentationProps> = ({
           </div>
         </div>
         
-        <div className="flex-1 overflow-hidden flex">
-          <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${showChat ? 'w-1/2' : 'w-full'}`}>
+        <div className="flex-1 flex overflow-hidden">
+          <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${showChat ? 'w-1/2 border-r' : 'w-full'}`}>
             {loading && (
               <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
+                <div className="text-center p-5">
                   <Loader2 className="w-10 h-10 text-purple-600 animate-spin mx-auto mb-4" />
                   <p className="text-gray-600">Gerando documentação...</p>
                 </div>
@@ -198,35 +203,29 @@ const ArtifactDocumentation: React.FC<ArtifactDocumentationProps> = ({
                   </div>
                 </div>
                 
-                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
                   <div className="flex justify-end">
                     <button
                       onClick={handleGenerateDocumentation}
                       disabled={loading}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm"
+                      className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center gap-2"
                     >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Gerando...</span>
-                        </>
-                      ) : (
-                        'Recriar Documentação'
-                      )}
+                      {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Regenerate
                     </button>
                   </div>
                 </div>
               </>
             )}
           </div>
-
-          {showChat && documentation && (
-            <div className="w-1/2 border-l flex flex-col h-full">
+          
+          {showChat && (
+            <div className="w-1/2 flex flex-col overflow-hidden">
               <DocumentationChat
                 artifactId={artifactId}
                 artifactName={artifactName}
                 artifactData={artifactData}
-                documentation={documentation}
+                documentation={documentation || ''}
                 onDocumentationUpdate={handleDocumentationUpdate}
               />
             </div>

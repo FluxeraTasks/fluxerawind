@@ -23,7 +23,7 @@ export const getSession = async () => {
 
 export const signIn = async (email: string, password: string) => {
   // Primeiro, verifica se o usuário existe
-  const { data: users, error: userError } = await supabase
+  const { error: userError } = await supabase
     .from('profiles')
     .select('id')
     .eq('email', email)

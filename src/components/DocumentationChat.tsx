@@ -80,15 +80,15 @@ const DocumentationChat: React.FC<DocumentationChatProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b bg-gray-50">
+    <div className="flex flex-col h-full bg-white">
+      <div className="p-4 border-b bg-gray-50 flex-shrink-0">
         <h3 className="text-sm font-medium text-gray-700">Documentation Chat</h3>
         <p className="text-sm text-gray-500">
           Ask me to update or add information to the documentation.
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -115,14 +115,14 @@ const DocumentationChat: React.FC<DocumentationChatProps> = ({
         <div ref={chatEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t">
+      <form onSubmit={handleSubmit} className="p-4 border-t bg-gray-50 flex-shrink-0">
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask me to update the documentation..."
-            className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+            className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-white"
             disabled={loading}
           />
           <button

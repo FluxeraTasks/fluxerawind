@@ -1,19 +1,34 @@
-import React from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Loader2, AlertCircle, Edit2, Save, X } from 'lucide-react';
 
 interface DocumentationContentProps {
   loading: boolean;
   error: string | null;
   documentation: string | null;
   onRegenerate: () => void;
+  onUpdate: (newDocumentation: string) => void;
 }
 
 const DocumentationContent: React.FC<DocumentationContentProps> = ({
   loading,
   error,
   documentation,
-  onRegenerate
+  onRegenerate,
+  onUpdate
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(documentation || '');
+
+  const handleSave = () => {
+    onUpdate(editedContent);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedContent(documentation || '');
+    setIsEditing(false);
+  };
+
   const renderSection = (content: string) => {
     const lines = content.split('\n');
     const sections: React.ReactNode[] = [];
@@ -199,39 +214,95 @@ const DocumentationContent: React.FC<DocumentationContentProps> = ({
   if (error) {
     return (
       <div className="m-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <p>{error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <div>
+            <h3 className="text-red-800 font-medium">Erro ao gerar documentação</h3>
+            <p className="text-red-600 mt-1">{error}</p>
+          </div>
         </div>
+        <button
+          onClick={onRegenerate}
+          className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          Tentar Novamente
+        </button>
       </div>
     );
   }
 
   if (!documentation) {
-    return null;
+    return (
+      <div className="m-6">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-gray-600 flex-shrink-0" />
+          <div>
+            <h3 className="text-gray-800 font-medium">Nenhuma documentação</h3>
+            <p className="text-gray-600 mt-1">Clique no botão abaixo para gerar a documentação.</p>
+          </div>
+        </div>
+        <button
+          onClick={onRegenerate}
+          className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          Gerar Documentação
+        </button>
+      </div>
+    );
   }
 
   return (
-    <>
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-8 max-w-3xl mx-auto">
-          {renderSection(documentation)}
-        </div>
-      </div>
-      
-      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-        <div className="flex justify-end">
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="flex justify-end mb-4 gap-2">
+          {isEditing ? (
+            <>
+              <button
+                onClick={handleSave}
+                className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center gap-1"
+              >
+                <Save className="w-4 h-4" />
+                Salvar
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-3 py-1.5 text-sm bg-purple-50 text-purple-600 rounded hover:bg-purple-100 transition-colors flex items-center gap-1"
+            >
+              <Edit2 className="w-4 h-4" />
+              Editar
+            </button>
+          )}
           <button
             onClick={onRegenerate}
-            disabled={loading}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+            className="px-3 py-1.5 text-sm bg-purple-50 text-purple-600 rounded hover:bg-purple-100 transition-colors"
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            Regenerate
+            Regenerar
           </button>
         </div>
+
+        {isEditing ? (
+          <textarea
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            className="w-full h-[calc(100vh-200px)] p-4 border rounded-lg font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            placeholder="Digite a documentação aqui..."
+          />
+        ) : (
+          <div className="prose prose-purple max-w-none">
+            {renderSection(documentation)}
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 };
 

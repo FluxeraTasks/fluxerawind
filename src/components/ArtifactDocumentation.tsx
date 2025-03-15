@@ -99,6 +99,7 @@ const ArtifactDocumentation: React.FC<ArtifactDocumentationProps> = ({
               error={error}
               documentation={documentation}
               onRegenerate={handleGenerateDocumentation}
+              onUpdate={handleDocumentationUpdate}
             />
           </div>
           

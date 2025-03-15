@@ -392,17 +392,18 @@ const WorkspaceArtifacts: React.FC<WorkspaceArtifactsProps> = ({ workspaceId }) 
                     )}
                     Atualizar
                   </button>
-                  <button
-                    onClick={() => setSelectedArtifact(null)}
-                    className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                  >
-                    Voltar
-                  </button>
+                  
                   <button
                     onClick={() => handleDeleteArtifact(selectedArtifact.id)}
                     className="px-3 py-1.5 text-sm bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
                   >
                     Deletar
+                  </button>
+                  <button
+                    onClick={() => setSelectedArtifact(null)}
+                    className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                  >
+                    Voltar
                   </button>
                 </div>
               </div>
